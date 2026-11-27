@@ -1,0 +1,5 @@
+# Product repo clones and their worktrees live here; never commit them to the factory repo.
+src/
+# Per-machine factory settings (target repo, sandbox paths).
+.claude/settings.local.json
+.DS_Store
