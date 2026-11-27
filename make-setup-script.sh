@@ -3,10 +3,11 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-FILES=(.mcp.json .github/pull_request_template.md .claude/settings.json .claude/hooks/verify-before-pr.sh
+FILES=(.mcp.json .gitignore .github/pull_request_template.md .claude/settings.json
+  .claude/hooks/verify-before-pr.sh .claude/hooks/atlassian-scope.sh
   .claude/commands/factory.md .claude/agents/jira-triager.md .claude/agents/spec-planner.md
   .claude/agents/factory-builder.md .claude/agents/qa-tester.md .claude/agents/security-reviewer.md
-  .claude/agents/release-ops.md CLAUDE.md INSTALLATION.md)
+  .claude/agents/release-ops.md CLAUDE.md INSTALLATION.md USER_MANUAL.md)
 
 for f in "${FILES[@]}"; do
   [ -z "$(tail -c1 "$f")" ] || { echo "$f must end with a newline" >&2; exit 1; }
@@ -43,14 +44,15 @@ for f in "${FILES[@]}"; do
 done
 cat <<'FTR'
 
-chmod +x .claude/hooks/verify-before-pr.sh
+mkdir -p src
+chmod +x .claude/hooks/verify-before-pr.sh .claude/hooks/atlassian-scope.sh
 echo "Done. Next: brew install jq gitleaks && gh auth status, then see INSTALLATION.md."
 FTR
 } > setup-factory.sh
 chmod +x setup-factory.sh
 
 # Self-check: a fresh scaffold reproduces every live file byte for byte.
-T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
+T=$(mktemp -d "${TMPDIR:-/tmp}/factory-scaffold.XXXXXX"); trap 'rm -rf "$T"' EXIT
 (cd "$T" && "$OLDPWD/setup-factory.sh" >/dev/null)
 for f in "${FILES[@]}"; do cmp -s "$f" "$T/$f" || { echo "MISMATCH: $f" >&2; exit 1; }; done
 echo "setup-factory.sh regenerated and verified (${#FILES[@]} files)."

@@ -1,6 +1,6 @@
 ---
 name: spec-planner
-description: Analyzes a build-ready Jira ticket against the codebase and produces a step-by-step technical and test specification.
+description: Analyzes the Jira ticket given to /factory against the codebase and produces a step-by-step technical and test specification.
 tools: Read, Glob, Grep
 model: sonnet
 ---
