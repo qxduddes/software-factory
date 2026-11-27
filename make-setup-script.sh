@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 FILES=(.mcp.json .github/pull_request_template.md .claude/settings.json .claude/hooks/verify-before-pr.sh
   .claude/commands/factory.md .claude/agents/jira-triager.md .claude/agents/spec-planner.md
   .claude/agents/factory-builder.md .claude/agents/qa-tester.md .claude/agents/security-reviewer.md
-  .claude/agents/release-ops.md CLAUDE.md)
+  .claude/agents/release-ops.md CLAUDE.md INSTALLATION.md)
 
 for f in "${FILES[@]}"; do
   [ -z "$(tail -c1 "$f")" ] || { echo "$f must end with a newline" >&2; exit 1; }
