@@ -38,27 +38,37 @@ After the run: the PR is a **draft**. **You** review it on GitHub, click **Ready
 | Product repo has `origin/<GITHUB_WORKING_BRANCH>` | Worktrees branch from it |
 | `gh auth status` succeeds | Needed to open PRs |
 | `gitleaks version` works | Every push is blocked without it |
-| The repo is cloned in `src/<repo>` with an `https://github.com/...` origin | The factory builds there; worktrees go in `src/.worktrees/` ([INSTALLATION.md](INSTALLATION.md) step 3) |
+| The repo is cloned in `../src/<repo>` (beside the factory folder) with an `https://github.com/...` origin | The factory builds there; worktrees go in `../src/.worktrees/` ([INSTALLATION.md](INSTALLATION.md) step 3) |
 | `gh auth status` shows your account, and `gh auth setup-git` was run | Pushes and PRs use your gh login |
 | The working branch and `main` are branch-protected on GitHub (recommended) | Your token can't merge there even if the hook were bypassed (INSTALLATION.md step 4) |
-(For a clone at `src/<repo>`, worktrees live in `src/.worktrees/<TICKET-KEY>`; the builder creates the folder.)
+(For a clone at `../src/<repo>`, worktrees live in `../src/.worktrees/<TICKET-KEY>`; the builder creates the folder.)
 
 ---
 
 ## 3. Start a session
 
-The session must run **in the factory folder** (this one), because that is where the agents, the `/factory` command, the push hook and the permission rules live. The product repo (`src/<repo>`) and its worktrees (`src/.worktrees/`) are inside it, so no extra folders are needed.
+The session must run **in the factory folder** (`software-factory`), because that is where the agents, the `/factory` command, the push hook and the permission rules live. The product repo lives beside it, in `src/`, outside the factory's git repo:
+
+```
+qx-factory/
+├── software-factory/   ← the factory: the session runs here
+└── src/                ← product clones and worktrees, outside the factory repo
+    ├── REPO/
+    └── .worktrees/<TICKET-KEY>
+```
+
+The session reaches `src/` through the `../src` path, which [INSTALLATION.md](INSTALLATION.md) step 3 sets up as an allowed directory.
 
 ### Claude Code (terminal)
 
 ```bash
-cd /path/to/qx-factory
+cd /path/to/qx-factory/software-factory
 claude
 ```
 
 ### Claude Desktop (Code tab)
 
-1. Open the **Code** tab and start a new session with the **qx-factory** folder as its working folder.
+1. Open the **Code** tab and start a new session with the **software-factory** folder as its working folder.
 2. Leave the permission mode on the default (asks before acting) or **accept edits**.
 
 ### Permission mode — important
@@ -96,7 +106,7 @@ When the ticket has passed QA and review, the factory asks you, showing:
 **Before approving, open the worktree and look at the real diff:**
 
 ```bash
-git -C src/.worktrees/PROJ-101 diff origin/<base-branch>...HEAD
+git -C ../src/.worktrees/PROJ-101 diff origin/<base-branch>...HEAD
 ```
 
 (In Claude Desktop you can also ask: *"show me the diff for PROJ-101"* before answering.)
@@ -122,15 +132,15 @@ The factory never marks a PR ready, never merges, and never sets `Done`.
 
 ## 7. Blocked or rejected tickets
 
-The worktree is kept at `src/.worktrees/<KEY>` with all commits; nothing was pushed. Read the Jira comment for the reason. Then choose one:
+The worktree is kept at `../src/.worktrees/<KEY>` with all commits; nothing was pushed. Read the Jira comment for the reason. Then choose one:
 
 **A. Finish it yourself.** Work in the worktree in a normal terminal (outside a factory session), push and open the PR yourself.
 
 **B. Re-run it from scratch.**
 
 ```bash
-git -C src/<repo> worktree remove src/.worktrees/PROJ-101
-git -C src/<repo> branch -D feat/PROJ-101-short-slug
+git -C ../src/<repo> worktree remove ../.worktrees/PROJ-101
+git -C ../src/<repo> branch -D feat/PROJ-101-short-slug
 ```
 
 Then, in Jira: fix the ticket description if it was the problem, remove the `factory-blocked` label, move it back to **To Do**, and run `/factory` again.
@@ -177,8 +187,8 @@ The hook applies to the **whole factory folder**: any session started here block
 - **Treat ticket text as untrusted.** Anyone who can edit the ticket influences what the agents write. Read the ticket before passing its URL to `/factory`, and read the diff before approving.
 - **Never approve without looking at the diff.** The security reviewer is advisory; you are the gate.
 - **The factory can't edit itself.** Claude's edit tools are denied on `.claude/`, `CLAUDE.md`, `.mcp.json` and the setup scripts. Change them in your editor, then run `./make-setup-script.sh` so `setup-factory.sh` stays in sync.
-- **The sandbox is on.** If an agent's install or test fails on a network or write restriction, add the host to `sandbox.network.allowedDomains` or the path to `sandbox.filesystem.allowWrite` (in `.claude/settings.local.json`) rather than disabling the sandbox.
-- **Clean up old worktrees** you no longer need (`git -C <repo> worktree list`, then `worktree remove`).
+- **The sandbox is on.** If an agent's install or test fails on a network restriction, add the host to `sandbox.network.allowedDomains` rather than disabling the sandbox. If it fails on a write under `../src`, check that `permissions.additionalDirectories` in `.claude/settings.local.json` lists the `src` folder (INSTALLATION.md step 3).
+- **Clean up old worktrees** you no longer need (`git -C ../src/<repo> worktree list`, then `worktree remove`).
 
 ---
 
@@ -186,7 +196,7 @@ The hook applies to the **whole factory folder**: any session started here block
 
 ```bash
 # Terminal session
-cd /path/to/qx-factory
+cd /path/to/qx-factory/software-factory
 claude
 ```
 
@@ -196,6 +206,6 @@ claude
 ```
 
 ```bash
-git -C src/.worktrees/<KEY> diff origin/<base-branch>...HEAD   # inspect before approving
-git -C src/<repo> worktree list                     # see open worktrees
+git -C ../src/.worktrees/<KEY> diff origin/<base-branch>...HEAD   # inspect before approving
+git -C ../src/<repo> worktree list                     # see open worktrees
 ```

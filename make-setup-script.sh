@@ -44,7 +44,6 @@ for f in "${FILES[@]}"; do
 done
 cat <<'FTR'
 
-mkdir -p src
 chmod +x .claude/hooks/verify-before-pr.sh .claude/hooks/atlassian-scope.sh
 echo "Done. Next: brew install jq gitleaks && gh auth status, then see INSTALLATION.md."
 FTR

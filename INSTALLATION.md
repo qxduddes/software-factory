@@ -4,9 +4,15 @@ Day-to-day usage in Claude Code (terminal) and Claude Desktop is in [USER_MANUAL
 
 ## 1. Scaffold the factory
 
-Run the script in a dedicated factory directory. It skips files that already exist; pass `--force` to overwrite them:
+Run the script in the factory directory (`software-factory`). It skips files that already exist; pass `--force` to overwrite them:
 
     chmod +x setup-factory.sh && ./setup-factory.sh
+
+The factory and the product repo sit side by side under one parent folder. Only the factory is a git repo; `src/` is kept out of it:
+
+    qx-factory/
+    ├── software-factory/   ← this factory (the Claude session runs here)
+    └── src/                ← product clones and their worktrees (outside the factory repo)
 
 ## 2. Install and verify dependencies
 
@@ -24,11 +30,11 @@ Pushes and PRs run as **your own GitHub account** (through `gh`). The factory ne
        gh auth login --hostname github.com --git-protocol https
        gh auth setup-git
 
-2. Clone the target repo into the factory's `src/` folder, from your own terminal, using its `https://github.com/...` URL (the hook checks this):
+2. From the factory folder, clone the target repo into `../src/` (beside the factory, not inside it), from your own terminal, using its `https://github.com/...` URL (the hook checks this):
 
-       git clone https://github.com/OWNER/REPO.git src/REPO
+       git clone https://github.com/OWNER/REPO.git ../src/REPO
 
-   `src/` is in the factory's `.gitignore`, so the product code is never committed to the factory repo. Ticket worktrees are created next to the clone, in `src/.worktrees/<TICKET-KEY>`.
+   `git clone` creates `src/` if it is missing. Because `src/` is outside the factory repo, the product code can never be committed to it. Ticket worktrees are created next to the clone, in `../src/.worktrees/<TICKET-KEY>`.
 3. Create `.claude/settings.local.json` in the factory directory. This is **the one place that says which repo the factory builds**: per machine, not committed, and agents cannot edit it. See §11 to switch repos.
 
    ```json
@@ -45,7 +51,13 @@ Pushes and PRs run as **your own GitHub account** (through `gh`). The factory ne
    - `GITHUB_URL`: the GitHub repo. The push hook refuses any push or PR whose `origin` (fetch or push URL) is a different repo.
    - `GITHUB_WORKING_BRANCH`: the branch worktrees start from and PRs target. It must exist on `origin`. The push hook blocks PRs with any other `--base`, and pushes to this branch, `main` or `master`.
    - `PROJECT_URL`: the **local path** of your clone (not a URL). `/factory` checks its `origin` matches `GITHUB_URL` and refuses the factory folder itself.
-   - No `sandbox.filesystem.allowWrite` entries are needed: `src/` is inside the factory folder, which the sandbox already lets the session write.
+   - `src/` is outside the factory folder, so it must be added as a directory the session may use. Add it to the same file. This one entry gives both the file tools and the Bash sandbox write access, so `git worktree add`, installs and tests under `src/` work:
+
+   ```json
+   {
+     "permissions": { "additionalDirectories": ["/Users/<you>/Work/projects/qx-factory/src"] }
+   }
+   ```
 
 If pushes fail with a credential error inside the sandbox (the macOS keychain may be unreachable from it), tell Claude; don't disable the sandbox.
 
@@ -67,7 +79,7 @@ This requires a PR with one approval and blocks force pushes and deletions. The 
 
 ## 5. Sandbox
 
-`.claude/settings.json` turns on the Claude Code sandbox for every Bash command (including subagents): writes are limited to the factory folder (which includes `src/`), credential files are unreadable, and network access is limited to GitHub and the npm/PyPI/Go registries. Commands cannot opt out of it.
+`.claude/settings.json` turns on the Claude Code sandbox for every Bash command (including subagents): writes are limited to the factory folder plus `../src` (added as an additional directory in step 3), credential files are unreadable, and network access is limited to GitHub and the npm/PyPI/Go registries. Commands cannot opt out of it.
 
 - If tests or installs need another host, add it to `sandbox.network.allowedDomains`.
 - The push hook itself runs outside the sandbox; it runs the tests with outbound network denied (`sandbox-exec`).
@@ -132,7 +144,7 @@ It rebuilds `setup-factory.sh` and verifies that a fresh scaffold reproduces eve
 
 The factory builds one repo at a time. To point it at another:
 
-1. Clone it into `src/` (step 3.2), with its `https://github.com/...` URL.
+1. Clone it into `../src/` (step 3.2), with its `https://github.com/...` URL.
 2. In your editor, change `env.GITHUB_URL`, `env.GITHUB_WORKING_BRANCH` and `env.PROJECT_URL` in `.claude/settings.local.json`.
 3. Make sure your account has write access to the repo, and apply branch protection (step 4).
 4. Check the repo's Jira project workflow has `To Do`, `In Progress`, `Code Review`, `Done`.
